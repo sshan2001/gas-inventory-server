@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Gas Inventory Server API v0.1.2
+Gas Inventory Server API v0.1.3
 Render 배포용 Flask 서버 파일
 
 수정 내용:
 - /api/v1/sync/push 500 방지용 예외 처리 강화
+- server_revision 저장 SQL 파라미터 오류 수정
 - Render 환경에서 SQLite 경로를 /tmp 쪽으로 안전하게 정리
 - 서버 오류 발생 시 JSON으로 상세 오류 반환
 - /api/v1/debug/db 점검 API 추가
@@ -25,7 +26,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 
-APP_VERSION = "server-v0.1.2"
+APP_VERSION = "server-v0.1.3"
 
 
 def resolve_db_path():
@@ -138,7 +139,7 @@ def set_server_revision(cur, revision):
         INSERT INTO server_meta (key, value)
         VALUES (?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    """, (str(revision),))
+    """, ("server_revision", str(revision)))
 
 
 def bump_server_revision(cur):
