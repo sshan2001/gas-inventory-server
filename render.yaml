@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gas-inventory-server
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GAS_INVENTORY_DB
+        value: gas_inventory_server.sqlite3
