@@ -244,7 +244,7 @@ def update_latest():
                 "message": "업데이트 정보가 아직 등록되지 않았습니다.",
             }), 404
 
-        with UPDATE_LATEST_JSON.open("r", encoding="utf-8") as f:
+        with UPDATE_LATEST_JSON.open("r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         latest_version = str(data.get("latest_version", "")).strip()
@@ -294,7 +294,7 @@ def update_download():
                 "error": "update metadata not found",
             }), 404
 
-        with UPDATE_LATEST_JSON.open("r", encoding="utf-8") as f:
+        with UPDATE_LATEST_JSON.open("r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         latest_version = str(data.get("latest_version", "")).strip()
