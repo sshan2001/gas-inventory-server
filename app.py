@@ -16,17 +16,21 @@ Start Command: gunicorn app:app
 """
 
 import json
+import hashlib
 import os
 import sqlite3
 import traceback
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 
 APP_VERSION = "server-v0.1.3"
+BASE_DIR = Path(__file__).resolve().parent
+UPDATES_DIR = BASE_DIR / "updates"
+UPDATE_LATEST_JSON = UPDATES_DIR / "latest.json"
 
 
 def resolve_db_path():
@@ -155,6 +159,14 @@ def require_json():
     return data, None
 
 
+def calc_file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 @app.get("/")
 def index():
     try:
@@ -220,6 +232,97 @@ def debug_db():
         })
     except Exception as exc:
         return json_error("debug db failed", 500, exc)
+
+
+@app.get("/api/v1/update/latest")
+def update_latest():
+    try:
+        if not UPDATE_LATEST_JSON.exists():
+            return jsonify({
+                "ok": False,
+                "error": "update metadata not found",
+                "message": "업데이트 정보가 아직 등록되지 않았습니다.",
+            }), 404
+
+        with UPDATE_LATEST_JSON.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        latest_version = str(data.get("latest_version", "")).strip()
+        file_name = str(data.get("file_name", "")).strip()
+
+        if not latest_version:
+            return jsonify({
+                "ok": False,
+                "error": "latest_version missing",
+            }), 500
+
+        if not file_name:
+            file_name = f"가스병재고관리_v{latest_version}.exe"
+
+        exe_path = UPDATES_DIR / file_name
+
+        file_size = 0
+        sha256 = str(data.get("sha256", "") or "").strip()
+
+        if exe_path.exists():
+            file_size = exe_path.stat().st_size
+            if not sha256:
+                sha256 = calc_file_sha256(exe_path)
+
+        return jsonify({
+            "ok": True,
+            "latest_version": latest_version,
+            "file_name": file_name,
+            "file_size": file_size,
+            "release_notes": data.get("release_notes", []),
+            "force_update": bool(data.get("force_update", False)),
+            "sha256": sha256,
+        })
+    except Exception as exc:
+        return jsonify({
+            "ok": False,
+            "error": str(exc),
+        }), 500
+
+
+@app.get("/api/v1/update/download")
+def update_download():
+    try:
+        if not UPDATE_LATEST_JSON.exists():
+            return jsonify({
+                "ok": False,
+                "error": "update metadata not found",
+            }), 404
+
+        with UPDATE_LATEST_JSON.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        latest_version = str(data.get("latest_version", "")).strip()
+        file_name = str(data.get("file_name", "")).strip()
+
+        if not file_name:
+            file_name = f"가스병재고관리_v{latest_version}.exe"
+
+        exe_path = UPDATES_DIR / file_name
+
+        if not exe_path.exists():
+            return jsonify({
+                "ok": False,
+                "error": "update exe not found",
+                "file_name": file_name,
+            }), 404
+
+        return send_file(
+            exe_path,
+            as_attachment=True,
+            download_name=file_name,
+            mimetype="application/vnd.microsoft.portable-executable",
+        )
+    except Exception as exc:
+        return jsonify({
+            "ok": False,
+            "error": str(exc),
+        }), 500
 
 
 @app.post("/api/v1/client/register")
