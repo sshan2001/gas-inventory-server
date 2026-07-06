@@ -1,0 +1,12 @@
+{
+  "latest_version": "0.6.0",
+  "file_name": "가스병재고관리_v0.6.0.exe",
+  "file_size": 0,
+  "release_notes": [
+    "서버 기반 자동 업데이트 적용",
+    "업데이트 코드 정리",
+    "기존 EXE 백업 후 교체"
+  ],
+  "force_update": false,
+  "sha256": ""
+}
